@@ -22,13 +22,10 @@
   let toastT;
 
   const paidOf = b => (b.payments || []).filter(p => p.status === 'Terverifikasi').reduce((s, p) => s + p.amount, 0);
-  /** Batas bayar: DP H-3 (23.59 WIB), pelunasan 24 jam sebelum berangkat (23.59 WIB dua hari sebelumnya). Sama dengan server. */
+  /** Batas bayar dihitung server (b.overdue = 'dp' | 'full'); sistem membatalkan otomatis bila Pengaturan > Pembatalan otomatis aktif. */
   function overdue(b) {
-    if (!b.date || ['Dibatalkan', 'Selesai'].includes(b.status)) return null;
-    const paid = paidOf(b), t = today(), dpBy = addDays(b.date, -3), fullBy = addDays(b.date, -2);
-    if (paid === 0 && t > dpBy) return { text: `Batas DP (${fmtDate(dpBy)}) terlewat. Sesuai ketentuan, pemesanan dapat dibatalkan.` };
-    if (b.price > 0 && paid < b.price && t > fullBy) return { text: `Batas pelunasan (${fmtDate(fullBy)}) terlewat.${paid > 0 ? ' Sesuai ketentuan, pemesanan dibatalkan dan DP hangus.' : ''}` };
-    return null;
+    if (!b.overdue) return null;
+    return { text: b.overdue === 'dp' ? `Batas DP (${fmtDate(addDays(b.date, -3))}) terlewat.` : `Batas pelunasan (${fmtDate(addDays(b.date, -2))}) terlewat; DP hangus.` };
   }
   const badge = s => `<span class="badge b-${esc(String(s).replace(/\s/g, ''))}">${esc(s)}</span>`;
   const payBadge = s => `<span class="badge ${s === 'Lunas' ? 'p-Lunas' : s === 'DP' ? 'p-DP' : s === 'Menunggu verifikasi' ? 'p-Menunggu' : s === 'Dikembalikan' ? 'p-Dikembalikan' : ''}">${esc(s || '-')}</span>`;
@@ -169,7 +166,7 @@
         <dt>Dibuat</dt><dd>${fmtDT(b.createdAt)} WIB</dd>
         <dt>Dibayar</dt><dd>${rp(paid)} dari ${b.price > 0 ? rp(b.price) : 'harga belum ditetapkan'}</dd>
       </dl>
-      ${overdue(b) ? `<div class="warn"><b>Lewat batas pembayaran.</b> ${esc(overdue(b).text)} Ubah status ke Dibatalkan bila sudah dikonfirmasi ke pelanggan.</div>` : ''}
+      ${overdue(b) ? `<div class="warn"><b>Lewat batas pembayaran.</b> ${esc(overdue(b).text)} Pemesanan akan dibatalkan otomatis pada pemeriksaan berikutnya (tiap 10 menit) bila pembatalan otomatis aktif.</div>` : ''}
       <form id="bkForm" class="sec">
         <h3>Ubah pemesanan</h3>
         <div class="row"><div><label for="f_status">Status</label><select id="f_status">${STATUSES.map(s => `<option ${s === b.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
@@ -398,6 +395,9 @@
         <h3 style="margin-top:22px">Ketentuan bayar</h3>
         <div class="row"><div><label for="s_dp">Uang muka (DP) %</label><input id="s_dp" type="number" min="10" max="100" value="${s.dpPercent || 50}"></div></div>
         <label for="s_pn">Catatan pembayaran</label><textarea id="s_pn" maxlength="500">${esc(s.paymentNote || '')}</textarea>
+        <h3 style="margin-top:22px">Pembatalan otomatis</h3>
+        <label class="check"><input type="checkbox" id="s_auto" ${s.autoCancel !== false ? 'checked' : ''}> Batalkan otomatis pemesanan yang melewati batas pembayaran</label>
+        <div class="hint">DP belum dibayar 3 hari sebelum berangkat → dibatalkan. Belum lunas 1 × 24 jam sebelum berangkat → dibatalkan dan DP hangus. Pelanggan mendapat jeda minimal 24 jam sejak pesanan dibuat atau harga ditetapkan; pesanan tanpa harga tidak dibatalkan. Pemeriksaan berjalan tiap 10 menit. Pesanan yang Anda aktifkan kembali secara manual tidak dibatalkan lagi.</div>
         <h3 style="margin-top:22px">Mode demo</h3>
         <label class="check"><input type="checkbox" id="s_demo" ${s.demoPayment ? 'checked' : ''}> Aktifkan tombol “Simulasi pembayaran” di halaman Lacak</label>
         <div class="hint">Untuk demonstrasi: pelanggan bisa menandai pesanan sebagai sudah dibayar tanpa transfer. Pembayaran simulasi ditandai DEMO dan tidak dihitung ke omzet terverifikasi. <b>Matikan sebelum website dipakai pelanggan sungguhan.</b></div>
@@ -414,7 +414,7 @@
       const rows = $$('.bank').map(r => Object.fromEntries($$('[data-b]', r).map(i => [i.dataset.b, i.value])));
       const image = $('#qimgVal').value;
       if ($('#s_qen').checked && !image) return toast('Unggah gambar QRIS terlebih dahulu.');
-      await api('/api/admin/settings', json('PUT', { banks: rows, qris: { enabled: $('#s_qen').checked, image }, dpPercent: Number($('#s_dp').value), demoPayment: $('#s_demo').checked, paymentNote: $('#s_pn').value, waNumber: $('#s_wa').value, phoneDisplay: $('#s_ph').value, email: $('#s_em').value, address: $('#s_ad').value }));
+      await api('/api/admin/settings', json('PUT', { banks: rows, qris: { enabled: $('#s_qen').checked, image }, dpPercent: Number($('#s_dp').value), demoPayment: $('#s_demo').checked, autoCancel: $('#s_auto').checked, paymentNote: $('#s_pn').value, waNumber: $('#s_wa').value, phoneDisplay: $('#s_ph').value, email: $('#s_em').value, address: $('#s_ad').value }));
       toast('Pengaturan tersimpan.'); vSettings();
     }));
   }

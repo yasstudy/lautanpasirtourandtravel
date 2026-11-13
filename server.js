@@ -148,7 +148,7 @@ const DEFAULT_PACKAGES = [
 ];
 const DEFAULT_SETTINGS = {
   waNumber: '6282234567890', phoneDisplay: '0822-3456-7890', email: 'lautanpasirtravel@gmail.com',
-  address: 'Jl. Raya Madiun No. 123, Malang', dpPercent: 50, paymentNote: '', demoPayment: false,
+  address: 'Jl. Raya Madiun No. 123, Malang', dpPercent: 50, paymentNote: '', demoPayment: false, autoCancel: true,
   banks: [], qris: { enabled: false, image: '' }
 };
 
@@ -232,15 +232,44 @@ function findBooking(rows, id) {
    - DP paling lambat 3 hari sebelum tanggal berangkat (sampai 23.59 WIB).
    - Pelunasan paling lambat 24 jam sebelum keberangkatan; acuan = pukul 00.00 WIB tanggal berangkat, jadi sampai 23.59 WIB dua hari sebelumnya. */
 const DP_DEADLINE_DAYS = 3;
+const GRACE_MS = 24 * 3600e3; // pelanggan minimal punya 24 jam sejak pesanan dibuat / harga ditetapkan sebelum bisa dibatalkan otomatis
+/** 'dp' | 'full' | null — apakah batas bayar terlewat (dengan masa tenggang & pengecualian). */
+function payOverdue(b, paid = paidTotal(b)) {
+  if (!validDate(b.date) || !(b.price > 0) || b.legacyPayment || b.autoCancelExempt) return null;
+  if (!['Pending', 'Dikonfirmasi'].includes(b.status)) return null;
+  const anchors = [Date.parse(b.createdAt) || 0, ...(b.timeline || []).filter(t => /^(Harga|Tanggal keberangkatan)/.test(t.label)).map(t => Date.parse(t.at) || 0)];
+  if (Date.now() < Math.max(...anchors) + GRACE_MS) return null;
+  const today = todayWib();
+  if (paid === 0 && today > addDays(b.date, -DP_DEADLINE_DAYS)) return 'dp';
+  if (paid < b.price && today > addDays(b.date, -2)) return 'full';
+  return null;
+}
 function deadlines(b, paid = paidTotal(b)) {
   if (!validDate(b.date)) return null;
-  const dpBy = addDays(b.date, -DP_DEADLINE_DAYS), fullBy = addDays(b.date, -2), today = todayWib();
-  const active = !['Dibatalkan', 'Selesai'].includes(b.status);
-  return {
-    dpBy, fullBy,
-    dpOverdue: active && paid === 0 && today > dpBy,
-    fullOverdue: active && (b.price || 0) > 0 && paid < b.price && today > fullBy
-  };
+  const o = payOverdue(b, paid);
+  return { dpBy: addDays(b.date, -DP_DEADLINE_DAYS), fullBy: addDays(b.date, -2), dpOverdue: o === 'dp', fullOverdue: o === 'full' };
+}
+const adm = b => ({ ...b, overdue: payOverdue(b) });
+/** Pembatalan otomatis: DP tidak dibayar sebelum H-3, atau belum lunas sebelum 24 jam keberangkatan (DP hangus). */
+async function sweepOverdue() {
+  const settings = await readJson('settings.json', DEFAULT_SETTINGS);
+  if (settings.autoCancel === false) return 0;
+  let n = 0;
+  await update('bookings.json', [], rows => {
+    for (const b of rows) {
+      const o = payOverdue(b); if (!o) continue;
+      const paid = paidTotal(b);
+      b.status = 'Dibatalkan'; n++;
+      if (o === 'full') {
+        b.dpForfeited = true;
+        addTimeline(b, 'Dibatalkan otomatis', `Pelunasan tidak dibayar paling lambat 1 × 24 jam sebelum keberangkatan. Pemesanan dibatalkan dan DP (Rp ${rupiah(paid)}) hangus sesuai ketentuan.`);
+      } else addTimeline(b, 'Dibatalkan otomatis', 'DP tidak dibayar paling lambat 3 hari sebelum keberangkatan. Pemesanan dibatalkan sesuai ketentuan.');
+      b.paymentStatus = computePaymentStatus(b);
+    }
+    return rows;
+  });
+  if (n) console.log(`[otomatis] ${n} pemesanan dibatalkan karena melewati batas pembayaran.`);
+  return n;
 }
 function publicBooking(b) {
   const paid = paidTotal(b);
@@ -570,7 +599,7 @@ app.get('/api/bookings', adminOnly, asyncRoute(async (req, res) => {
   if (status && status !== 'Semua') rows = rows.filter(r => r.status === status);
   if (query) rows = rows.filter(r => [r.id, r.customerName, r.customerPhone, r.customerEmail, r.package, r.fleet, r.date].some(v => String(v || '').toLocaleLowerCase('id').includes(query)));
   rows.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-  res.json({ bookings: rows, total: rows.length });
+  res.json({ bookings: rows.map(adm), total: rows.length });
 }));
 app.patch('/api/bookings/:id', adminOnly, asyncRoute(async (req, res) => {
   const body = req.body || {};
@@ -608,17 +637,18 @@ app.patch('/api/bookings/:id', adminOnly, asyncRoute(async (req, res) => {
       const conflict = f && availabilityConflict(f, rows, await getBlocks(), b.date, Math.max(1, Number(b.days) || 1), Math.max(1, Number(b.fleetCount) || 1), b.id);
       if (conflict) throw new HttpError(409, conflict.message, { conflict });
     }
+    if (before.status === 'Dibatalkan' && b.status !== 'Dibatalkan') { b.autoCancelExempt = true; b.dpForfeited = false; } // admin mengaktifkan lagi: jangan dibatalkan otomatis lagi
     b.paymentStatus = computePaymentStatus(b);
     return b;
   });
-  res.json({ booking });
+  res.json({ booking: adm(booking) });
 }));
 app.post('/api/bookings/:id/timeline', adminOnly, asyncRoute(async (req, res) => {
   const label = cleanText(req.body?.label, 80) || 'Update perjalanan';
   const note = cleanText(req.body?.note, 300);
   if (!note) throw new HttpError(400, 'Tulis isi update untuk pelanggan.');
   const booking = await update('bookings.json', [], rows => { const b = findBooking(rows, req.params.id); addTimeline(b, label, note, 'admin'); return b; });
-  res.json({ booking });
+  res.json({ booking: adm(booking) });
 }));
 app.post('/api/bookings/:id/payments', adminOnly, asyncRoute(async (req, res) => {
   const amount = toInt(req.body?.amount, 1, 10_000_000_000, null);
@@ -632,7 +662,7 @@ app.post('/api/bookings/:id/payments', adminOnly, asyncRoute(async (req, res) =>
     addTimeline(b, 'Pembayaran dicatat', `Rp ${rupiah(amount)} (${method}).`, 'admin');
     return b;
   });
-  res.status(201).json({ booking });
+  res.status(201).json({ booking: adm(booking) });
 }));
 app.patch('/api/bookings/:id/payments/:pid', adminOnly, asyncRoute(async (req, res) => {
   const status = req.body?.status;
@@ -646,7 +676,7 @@ app.patch('/api/bookings/:id/payments/:pid', adminOnly, asyncRoute(async (req, r
     addTimeline(b, status === 'Terverifikasi' ? 'Pembayaran diverifikasi' : 'Pembayaran ditolak', status === 'Terverifikasi' ? `Rp ${rupiah(p.amount)} diterima.` : (p.note || 'Bukti pembayaran belum sesuai, silakan unggah ulang.'), 'admin');
     return b;
   });
-  res.json({ booking });
+  res.json({ booking: adm(booking) });
 }));
 app.delete('/api/bookings/:id', adminOnly, asyncRoute(async (req, res) => {
   const deleted = await update('bookings.json', [], rows => {
@@ -827,7 +857,7 @@ app.put('/api/admin/settings', adminOnly, asyncRoute(async (req, res) => {
   const settings = await update('settings.json', DEFAULT_SETTINGS, current => {
     Object.assign(current, {
       waNumber: wa || current.waNumber, phoneDisplay: cleanText(b.phoneDisplay, 40), email, address: cleanText(b.address, 200),
-      dpPercent: toInt(b.dpPercent, 10, 100, 50), paymentNote: cleanText(b.paymentNote, 500), banks, demoPayment: Boolean(b.demoPayment),
+      dpPercent: toInt(b.dpPercent, 10, 100, 50), paymentNote: cleanText(b.paymentNote, 500), banks, demoPayment: Boolean(b.demoPayment), autoCancel: b.autoCancel !== false,
       qris: { enabled: Boolean(b.qris?.enabled) && Boolean(qrisImage), image: qrisImage }
     });
     return current;
@@ -882,6 +912,8 @@ async function boot() {
   }
   await migrate();
   await ensureAdmin();
+  await sweepOverdue().catch(e => console.error('sweep gagal:', e.message));
+  setInterval(() => sweepOverdue().catch(e => console.error('sweep gagal:', e.message)), 10 * 60e3).unref();
   const saved = await readJson('sessions.json', {});
   const now = Date.now();
   for (const [k, v] of Object.entries(saved)) if (v && v.exp > now) sessions.set(k, v);

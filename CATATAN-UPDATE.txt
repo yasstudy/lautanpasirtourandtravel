@@ -1,13 +1,13 @@
-UPDATE: Mode Demo pembayaran, Titik Penjemputan, Notice batas bayar
-Cara pasang: salin 5 file ini ke proyek (timpa file lama, struktur folder sama), lalu jalankan ulang server.
-Data lama aman (tidak ada migrasi). Tidak ada variabel baru.
+UPDATE: Mode Demo, Titik Penjemputan, Notice batas bayar, PEMBATALAN OTOMATIS
+Pasang: timpa 5 file ini ke proyek (struktur folder sama), jalankan ulang server. Data lama aman, tanpa variabel baru.
+(Bila sebelumnya sudah memasang update demo-notice, file ini menggantikannya.)
 
-1. Mode demo: Admin > Pembayaran & Kontak > "Mode demo". Bila aktif, halaman Lacak menampilkan tombol
-   Simulasi bayar DP / lunas. Pembayaran ditandai SIMULASI (DEMO), tidak dihitung ke omzet terverifikasi.
-   Matikan sebelum dipakai pelanggan sungguhan. Saat nonaktif, server menolak (403).
-2. "Tujuan / titik penjemputan" -> "Titik penjemputan" (form, halaman Lacak, panel admin).
-3. DP: paling lambat 3 hari sebelum berangkat (sampai 23.59 WIB), jika tidak pemesanan dibatalkan.
-4. Pelunasan: paling lambat 1x24 jam sebelum berangkat (acuan 00.00 WIB tanggal berangkat = sampai 23.59 WIB
-   dua hari sebelumnya), jika tidak pemesanan dibatalkan dan DP hangus.
-   Notice tampil di formulir pesan, layar sukses (dengan tanggal), dan halaman Lacak. Admin melihat label
-   "Lewat batas bayar" di daftar/rincian. Pembatalan tetap manual oleh admin (ubah status ke Dibatalkan).
+Pembatalan otomatis (Admin > Pembayaran & Kontak > "Pembatalan otomatis", bawaan AKTIF):
+- DP belum dibayar paling lambat 3 hari sebelum berangkat (23.59 WIB) -> status Dibatalkan.
+- Belum lunas paling lambat 1x24 jam sebelum berangkat (acuan 00.00 WIB tanggal berangkat) -> Dibatalkan, DP hangus.
+- Diperiksa saat server start dan tiap 10 menit. Riwayat tampil di halaman Lacak ("Dibatalkan otomatis").
+- Pengaman: tidak membatalkan pesanan tanpa harga; jeda minimal 24 jam sejak pesanan dibuat/harga ditetapkan/tanggal diubah;
+  tidak menyentuh status Dalam Perjalanan/Selesai dan data lama (legacy); pesanan yang diaktifkan lagi oleh admin
+  tidak dibatalkan otomatis lagi. Unit armada langsung terlepas karena pesanan dibatalkan.
+- "DP hangus" hanya penanda (dpForfeited); tidak ada pengembalian dana otomatis.
+Lainnya: lihat catatan sebelumnya (mode demo, titik penjemputan, notice).

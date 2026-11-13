@@ -56,7 +56,7 @@
     let body = '';
     const dl = b.deadlines;
     const rules = dl ? (dl.fullOverdue || dl.dpOverdue
-      ? `<div class="alert err"><b>Batas pembayaran sudah terlewat.</b> Pemesanan dapat dibatalkan oleh tim kami. Segera hubungi kami lewat WhatsApp bila Anda masih ingin melanjutkan.</div>`
+      ? `<div class="alert err"><b>Batas pembayaran sudah terlewat.</b> ${settings.autoCancel === false ? 'Pemesanan dapat dibatalkan oleh tim kami.' : 'Pemesanan ini akan dibatalkan otomatis sesuai ketentuan.'} Segera hubungi kami lewat WhatsApp bila Anda masih ingin melanjutkan.</div>`
       : b.balance > 0 && b.price > 0 ? `<div class="alert warn"><b>Batas pembayaran</b><br>${b.paid === 0 ? `DP paling lambat <b>${esc(LP.fmtDate(dl.dpBy))}</b> (3 hari sebelum berangkat); jika tidak, pemesanan dibatalkan.<br>` : ''}Pelunasan paling lambat <b>${esc(LP.fmtDate(dl.fullBy))} pukul 23.59 WIB</b> (1 × 24 jam sebelum berangkat); jika tidak, pemesanan dibatalkan dan DP yang sudah dibayarkan hangus.</div>` : '') : '';
     if (!(b.price > 0)) {
       body = '<div class="alert warn">Harga untuk pemesanan ini sedang disiapkan oleh tim kami. Anda akan dihubungi lewat WhatsApp, dan opsi pembayaran muncul di sini setelah harga ditetapkan.</div>';
