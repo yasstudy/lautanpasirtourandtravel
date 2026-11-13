@@ -60,7 +60,7 @@ lautanpasirtourandtravel.com, www.lautanpasirtourandtravel.com {
 
 Aplikasi ini sudah siap untuk SnapDeploy: membaca `PORT` dari platform, mendengarkan di
 `0.0.0.0`, punya `/api/health`, dan `npm start` menjalankan `server.js`.
-**Satu-satunya variabel yang perlu diisi: `ADMIN_USER` dan `ADMIN_PASSWORD`** (min. 10 karakter).
+**Satu-satunya variabel yang perlu diisi: `ADMIN_USER` dan `ADMIN_PASSWORD`** (opsi lain ada di `config.js`, tidak perlu diisi di dashboard) (min. 10 karakter).
 `PORT`/`HOST` diatur otomatis oleh SnapDeploy; jangan diisi.
 
 1. Buat repo GitHub dan unggah isi folder ini (`.gitignore` sudah menyingkirkan `node_modules`, `data`, `.env`).

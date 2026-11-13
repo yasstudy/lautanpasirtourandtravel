@@ -19,14 +19,15 @@ const { promisify } = require('node:util');
 const scrypt = promisify(crypto.scrypt);
 
 const ROOT = __dirname;
-const PORT = Number(process.env.PORT) || 3000;
-const HOST = process.env.HOST || '0.0.0.0'; // start.bat memakai 127.0.0.1 untuk komputer lokal; hosting cloud memerlukan 0.0.0.0
-const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(ROOT, 'data');
+const cfg = require('./config').read;
+const PORT = Number(cfg('PORT')) || 3000;
+const HOST = String(cfg('HOST')); // start.bat memakai 127.0.0.1 untuk komputer lokal; hosting cloud memerlukan 0.0.0.0
+const DATA_DIR = cfg('DATA_DIR') ? path.resolve(String(cfg('DATA_DIR'))) : path.join(ROOT, 'data');
 const PROOF_DIR = path.join(DATA_DIR, 'proofs');
 const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
 const SESSION_TTL = 12 * 60 * 60 * 1000; // 12 jam
-const TZ_OFFSET_HOURS = Number(process.env.TZ_OFFSET_HOURS ?? 7); // WIB
-const RL = Math.max(1, Number(process.env.RATE_LIMIT_MULTIPLIER) || 1);
+const TZ_OFFSET_HOURS = Number(cfg('TZ_OFFSET_HOURS')); // WIB
+const RL = Math.max(1, Number(cfg('RATE_LIMIT_MULTIPLIER')) || 1);
 const MAX_AHEAD_DAYS = 730;
 
 const STATUSES = ['Pending', 'Dikonfirmasi', 'Dalam Perjalanan', 'Selesai', 'Dibatalkan'];
@@ -339,7 +340,7 @@ const app = express();
 app.disable('x-powered-by');
 // Di hosting cloud, semua lalu lintas lewat proxy platform: percayai X-Forwarded-For agar pembatas laju & login memakai IP pengunjung asli.
 const loopback = ['127.0.0.1', 'localhost', '::1'].includes(HOST);
-const trust = process.env.TRUST_PROXY !== undefined ? Number(process.env.TRUST_PROXY) : (loopback ? 0 : 1);
+const trust = cfg('TRUST_PROXY') !== '' ? Number(cfg('TRUST_PROXY')) : (loopback ? 0 : 1);
 if (trust) app.set('trust proxy', trust);
 
 app.use((req, res, next) => {
