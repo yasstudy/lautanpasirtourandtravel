@@ -20,6 +20,7 @@ const scrypt = promisify(crypto.scrypt);
 
 const ROOT = __dirname;
 const cfg = require('./config').read;
+const persist = require('./persist');
 const PORT = Number(cfg('PORT')) || 3000;
 const HOST = String(cfg('HOST')); // start.bat memakai 127.0.0.1 untuk komputer lokal; hosting cloud memerlukan 0.0.0.0
 const DATA_DIR = cfg('DATA_DIR') ? path.resolve(String(cfg('DATA_DIR'))) : path.join(ROOT, 'data');
@@ -95,7 +96,9 @@ async function readJson(file, fallback) {
 async function writeJson(file, value) {
   const target = path.join(DATA_DIR, file);
   const tmp = `${target}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`;
-  await fs.writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`);
+  const text = `${JSON.stringify(value, null, 2)}\n`;
+  await fs.writeFile(tmp, text);
+  try { await persist.save(file, Buffer.from(text)); } catch (e) { await fs.rm(tmp, { force: true }); throw e; }
   await fs.rename(tmp, target);
 }
 /** Baca-ubah-tulis yang aman dari tabrakan. Jika mutator melempar error, tidak ada yang ditulis. */
@@ -527,6 +530,7 @@ app.post('/api/track/payments', limiter('pay', 20, 3600e3), asyncRoute(async (re
     const amount = body.option === 'dp' && paidTotal(b) === 0 ? dp : outstanding;
     const file = `${b.id}-${crypto.randomBytes(6).toString('hex')}.${ext}`;
     await fs.writeFile(path.join(PROOF_DIR, file), buf, { flag: 'wx' });
+    try { await persist.save(`proofs/${file}`, buf); } catch (e) { await fs.rm(path.join(PROOF_DIR, file), { force: true }); throw e; }
     b.payments = b.payments || [];
     b.payments.push({
       id: `PAY-${crypto.randomBytes(3).toString('hex').toUpperCase()}`, at: nowIso(), method,
@@ -684,7 +688,7 @@ app.delete('/api/bookings/:id', adminOnly, asyncRoute(async (req, res) => {
     if (i < 0) throw new HttpError(404, 'Pemesanan tidak ditemukan.');
     return rows.splice(i, 1)[0];
   });
-  for (const p of deleted.payments || []) if (p.proof && /^[\w-]+\.(jpg|png|webp)$/.test(p.proof)) await fs.rm(path.join(PROOF_DIR, p.proof), { force: true });
+  for (const p of deleted.payments || []) if (p.proof && /^[\w-]+\.(jpg|png|webp)$/.test(p.proof)) { await fs.rm(path.join(PROOF_DIR, p.proof), { force: true }); await persist.remove(`proofs/${p.proof}`).catch(() => {}); }
   res.json({ success: true, booking: deleted });
 }));
 app.get('/api/admin/proofs/:file', adminOnly, (req, res, next) => {
@@ -868,8 +872,11 @@ app.post('/api/admin/upload', adminOnly, asyncRoute(async (req, res) => {
   const { buf, ext } = decodeImage(req.body?.image, 5 * 1048576);
   const file = `${Date.now().toString(36)}-${crypto.randomBytes(6).toString('hex')}.${ext}`;
   await fs.writeFile(path.join(UPLOAD_DIR, file), buf, { flag: 'wx' });
+  try { await persist.save(`uploads/${file}`, buf); } catch (e) { await fs.rm(path.join(UPLOAD_DIR, file), { force: true }); throw e; }
   res.status(201).json({ url: `/uploads/${file}` });
 }));
+
+app.get('/api/admin/storage', adminOnly, (_req, res) => res.json({ persistent: persist.enabled }));
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Endpoint API tidak ditemukan.' }));
 
@@ -905,6 +912,8 @@ async function migrate() {
   });
 }
 async function boot() {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  await persist.init(DATA_DIR);
   await fs.mkdir(PROOF_DIR, { recursive: true });
   await fs.mkdir(UPLOAD_DIR, { recursive: true });
   for (const [file, value] of [['packages.json', DEFAULT_PACKAGES], ['fleet.json', DEFAULT_FLEET], ['settings.json', DEFAULT_SETTINGS], ['bookings.json', []], ['blocks.json', []]]) {

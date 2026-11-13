@@ -150,8 +150,8 @@ ${st.error ? `<div class="alert err">${esc(st.error)}</div>` : ''}
   }
 
   /* ---- header & footer ---- */
-  const LOGO = (last) => `<svg viewBox="0 0 64 54" fill="none" aria-hidden="true"><path d="M6 16C16 5 25 5 32 16C39 27 49 27 59 15" stroke="#F4B52E" stroke-width="7" stroke-linecap="round"/><path d="M4 27C15 18 25 18 34 27C43 36 51 35 60 26" stroke="#1599D0" stroke-width="7" stroke-linecap="round"/><path d="M4 39C15 30 25 30 34 39C43 48 51 47 60 38" stroke="${last}" stroke-width="7" stroke-linecap="round"/></svg>`;
-  const NAV = [['/', 'Beranda'], ['/paket', 'Paket Wisata'], ['/armada', 'Armada'], ['/#cara-pesan', 'Cara Pemesanan'], ['/lacak', 'Lacak Pesanan'], ['#kontak', 'Kontak']];
+  const LOGO = () => '<img class="brand-logo" src="/images/logo-icon.png?v=2" width="46" height="48" alt="">';
+  const NAV = [['/', 'Beranda'], ['/paket', 'Paket Wisata'], ['/armada', 'Armada'], ['/#cara-pesan', 'Cara Pemesanan'], ['#kontak', 'Kontak']];
   const path = location.pathname.replace(/index\.html$/, '').replace(/\.html$/, '') || '/';
 
   function renderChrome(s) {

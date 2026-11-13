@@ -10,7 +10,8 @@ const defaults = {
   DATA_DIR: '',             // kosong = folder "data" di samping server.js; isi path volume bila hosting punya disk permanen
   TZ_OFFSET_HOURS: 7,       // 7 = WIB, 8 = WITA, 9 = WIT
   TRUST_PROXY: '',          // kosong = otomatis (aktif di cloud, mati di komputer lokal)
-  RATE_LIMIT_MULTIPLIER: 1  // hanya untuk pengujian
+  RATE_LIMIT_MULTIPLIER: 1, // hanya untuk pengujian
+  DATABASE_URL: ''          // isi (env) dengan alamat Postgres/Neon agar data permanen; kosong = hanya disk
 };
 // Pembacaan dinamis (bukan process.env.NAMA) agar pemindai platform tidak menganggapnya wajib diisi.
 const read = key => { const v = process.env[key]; return v !== undefined && v !== '' ? v : defaults[key]; };

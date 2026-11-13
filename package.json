@@ -4,7 +4,15 @@
   "private": true,
   "description": "Website, pemesanan, kalender armada, pembayaran, tracking, dan panel admin Lautan Pasir Tour & Travel",
   "main": "server.js",
-  "engines": { "node": ">=18" },
-  "scripts": { "start": "node server.js", "dev": "node --watch server.js" },
-  "dependencies": { "express": "^4.21.2" }
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
 }

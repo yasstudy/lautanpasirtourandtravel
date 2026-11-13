@@ -85,6 +85,12 @@
     showView('app');
     go(location.hash.slice(1) || 'pemesanan');
     refreshDot();
+    api('/api/admin/storage').then(s => {
+      if (s.persistent || $('#storeWarn')) return;
+      const w = document.createElement('div'); w.id = 'storeWarn'; w.className = 'stat alert'; w.style.cssText = 'margin:12px 16px;padding:12px 16px;border:1px solid #f4b52e;border-radius:10px';
+      w.innerHTML = '<b>Data belum permanen.</b> Perubahan di panel ini akan hilang saat server restart atau deploy ulang. Isi <code>DATABASE_URL</code> (database Neon) di pengaturan hosting.';
+      $('#main').before(w);
+    }).catch(() => {});
   }
   async function refreshDot() {
     try { const s = await api('/api/stats'); const n = (s.pendingPayments || 0) + (s.statusCounts?.Pending || 0); const d = $('#pendDot'); d.textContent = n; d.classList.toggle('hidden', !n); } catch { /* abaikan */ }
