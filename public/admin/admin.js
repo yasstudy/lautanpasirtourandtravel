@@ -21,6 +21,15 @@
   let fleets = [];
   let toastT;
 
+  const paidOf = b => (b.payments || []).filter(p => p.status === 'Terverifikasi').reduce((s, p) => s + p.amount, 0);
+  /** Batas bayar: DP H-3 (23.59 WIB), pelunasan 24 jam sebelum berangkat (23.59 WIB dua hari sebelumnya). Sama dengan server. */
+  function overdue(b) {
+    if (!b.date || ['Dibatalkan', 'Selesai'].includes(b.status)) return null;
+    const paid = paidOf(b), t = today(), dpBy = addDays(b.date, -3), fullBy = addDays(b.date, -2);
+    if (paid === 0 && t > dpBy) return { text: `Batas DP (${fmtDate(dpBy)}) terlewat. Sesuai ketentuan, pemesanan dapat dibatalkan.` };
+    if (b.price > 0 && paid < b.price && t > fullBy) return { text: `Batas pelunasan (${fmtDate(fullBy)}) terlewat.${paid > 0 ? ' Sesuai ketentuan, pemesanan dibatalkan dan DP hangus.' : ''}` };
+    return null;
+  }
   const badge = s => `<span class="badge b-${esc(String(s).replace(/\s/g, ''))}">${esc(s)}</span>`;
   const payBadge = s => `<span class="badge ${s === 'Lunas' ? 'p-Lunas' : s === 'DP' ? 'p-DP' : s === 'Menunggu verifikasi' ? 'p-Menunggu' : s === 'Dikembalikan' ? 'p-Dikembalikan' : ''}">${esc(s || '-')}</span>`;
   function toast(msg) { let t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); } t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), 3500); }
@@ -131,7 +140,7 @@
         <select id="bkS" aria-label="Status">${['Semua', ...STATUSES].map(s => `<option ${s === bkFilter.status ? 'selected' : ''}>${s}</option>`).join('')}</select>
       </div>
       <div class="tw"><table><thead><tr><th>Kode / Pelanggan</th><th>Paket &amp; Armada</th><th>Jadwal</th><th>Total</th><th>Status</th></tr></thead><tbody>
-      ${list.bookings.map(b => `<tr data-open="${esc(b.id)}"><td><b>${esc(b.id)}</b><small>${esc(b.customerName)} · ${esc(b.customerPhone)}</small></td><td>${esc(b.package)}<small>${esc(b.fleetCount || 1)} × ${esc(b.fleet)} · ${esc(b.guests)} peserta</small></td><td>${fmtDate(b.date)}<small>${b.days || 1} hari${b.days > 1 ? ` s/d ${fmtDate(addDays(b.date, b.days - 1))}` : ''}</small></td><td>${b.price > 0 ? rp(b.price) : '<span class="muted">Belum ada</span>'}<small>${payBadge(b.paymentStatus)}</small></td><td>${badge(b.status)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Belum ada pemesanan.</td></tr>'}
+      ${list.bookings.map(b => `<tr data-open="${esc(b.id)}"><td><b>${esc(b.id)}</b><small>${esc(b.customerName)} · ${esc(b.customerPhone)}</small></td><td>${esc(b.package)}<small>${esc(b.fleetCount || 1)} × ${esc(b.fleet)} · ${esc(b.guests)} peserta</small></td><td>${fmtDate(b.date)}<small>${b.days || 1} hari${b.days > 1 ? ` s/d ${fmtDate(addDays(b.date, b.days - 1))}` : ''}</small></td><td>${b.price > 0 ? rp(b.price) : '<span class="muted">Belum ada</span>'}<small>${payBadge(b.paymentStatus)}</small></td><td>${badge(b.status)}${overdue(b) ? '<small style="color:var(--red);font-weight:700">Lewat batas bayar</small>' : ''}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Belum ada pemesanan.</td></tr>'}
       </tbody></table></div>`;
     $('#bkS').onchange = e => { bkFilter.status = e.target.value; go('pemesanan'); };
     $('#bkQ').oninput = e => { clearTimeout(bkTimer); bkTimer = setTimeout(async () => { bkFilter.q = e.target.value; const pos = e.target.selectionStart; await vBookings(); const q = $('#bkQ'); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }, 350); };
@@ -156,10 +165,11 @@
       <dl class="kv" style="margin-top:12px">
         <dt>Pelanggan</dt><dd>${esc(b.customerName)}<br><a href="https://wa.me/${encodeURIComponent(String(b.customerPhone).replace(/^0/, '62'))}" target="_blank" rel="noopener">${esc(b.customerPhone)}</a>${b.customerEmail ? ` · ${esc(b.customerEmail)}` : ''}</dd>
         <dt>Paket</dt><dd>${esc(b.package)}</dd>
-        <dt>Tujuan</dt><dd>${esc(b.destination || '-')}</dd>
+        <dt>Titik penjemputan</dt><dd>${esc(b.destination || '-')}</dd>
         <dt>Dibuat</dt><dd>${fmtDT(b.createdAt)} WIB</dd>
         <dt>Dibayar</dt><dd>${rp(paid)} dari ${b.price > 0 ? rp(b.price) : 'harga belum ditetapkan'}</dd>
       </dl>
+      ${overdue(b) ? `<div class="warn"><b>Lewat batas pembayaran.</b> ${esc(overdue(b).text)} Ubah status ke Dibatalkan bila sudah dikonfirmasi ke pelanggan.</div>` : ''}
       <form id="bkForm" class="sec">
         <h3>Ubah pemesanan</h3>
         <div class="row"><div><label for="f_status">Status</label><select id="f_status">${STATUSES.map(s => `<option ${s === b.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
@@ -175,7 +185,7 @@
         <div class="actions"><button class="btn" type="submit">Simpan</button><button class="btn danger" type="button" id="bkDel">Hapus</button></div>
       </form>
       <div class="sec"><h3>Pembayaran</h3>
-        ${(b.payments || []).map(p => `<div class="pay" data-pay="${esc(p.id)}"><div class="top"><b>${rp(p.amount)} · ${esc(p.method)}${p.bank ? ` · ${esc(p.bank)}` : ''}</b><span class="badge ${p.status === 'Terverifikasi' ? 'p-Lunas' : p.status === 'Ditolak' ? 'p-Dikembalikan' : 'p-Menunggu'}">${esc(p.status)}</span></div><div class="muted small">${fmtDT(p.at)}${p.senderName ? ` · pengirim: ${esc(p.senderName)}` : ''}${p.note ? ` · ${esc(p.note)}` : ''}</div>${p.proof ? `<img class="proof" data-proof="${esc(p.proof)}" alt="Bukti pembayaran" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==">` : ''}${p.status === 'Menunggu verifikasi' ? `<div class="actions"><button class="btn ok sm" data-verify="Terverifikasi">Verifikasi</button><button class="btn danger sm" data-verify="Ditolak">Tolak</button></div>` : ''}</div>`).join('') || '<p class="muted">Belum ada pembayaran.</p>'}
+        ${(b.payments || []).map(p => `<div class="pay" data-pay="${esc(p.id)}"><div class="top"><b>${rp(p.amount)} · ${p.demo ? 'SIMULASI (DEMO)' : esc(p.method)}${p.bank ? ` · ${esc(p.bank)}` : ''}</b><span class="badge ${p.status === 'Terverifikasi' ? 'p-Lunas' : p.status === 'Ditolak' ? 'p-Dikembalikan' : 'p-Menunggu'}">${esc(p.status)}</span></div><div class="muted small">${fmtDT(p.at)}${p.senderName ? ` · pengirim: ${esc(p.senderName)}` : ''}${p.note ? ` · ${esc(p.note)}` : ''}</div>${p.proof ? `<img class="proof" data-proof="${esc(p.proof)}" alt="Bukti pembayaran" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==">` : ''}${p.status === 'Menunggu verifikasi' ? `<div class="actions"><button class="btn ok sm" data-verify="Terverifikasi">Verifikasi</button><button class="btn danger sm" data-verify="Ditolak">Tolak</button></div>` : ''}</div>`).join('') || '<p class="muted">Belum ada pembayaran.</p>'}
         <form id="payForm" class="row3" style="align-items:end"><div><label for="pa">Catat pembayaran (Rp)</label><input id="pa" type="number" min="1" step="1000" required></div><div><label for="pm">Metode</label><select id="pm"><option value="tunai">Tunai</option><option value="transfer">Transfer</option><option value="qris">QRIS</option><option value="lainnya">Lainnya</option></select></div><div><button class="btn line" type="submit" style="margin-top:12px">Catat</button></div></form>
       </div>
       <div class="sec"><h3>Linimasa pelanggan</h3>
@@ -315,7 +325,7 @@
       <form id="pkForm">
         <label for="k_name">Nama paket</label><input id="k_name" type="text" maxlength="120" required value="${esc(cur.name)}">
         <div class="row3"><div><label for="k_days">Lama (hari)</label><input id="k_days" type="number" min="1" max="30" value="${cur.days || 1}"></div><div><label for="k_tag">Label</label><input id="k_tag" type="text" maxlength="30" value="${esc(cur.tag || '')}" placeholder="Terlaris"></div><div><label for="k_order">Urutan</label><input id="k_order" type="number" min="0" max="999" value="${cur.order ?? 50}"></div></div>
-        <label for="k_dest">Destinasi</label><input id="k_dest" type="text" maxlength="160" value="${esc(cur.destinations || '')}">
+        <label for="k_dest">Destinasi wisata</label><input id="k_dest" type="text" maxlength="160" value="${esc(cur.destinations || '')}">
         <label for="k_fac">Fasilitas singkat</label><input id="k_fac" type="text" maxlength="80" value="${esc(cur.facilities || '')}">
         <label>Armada &amp; harga paket per bus (sudah termasuk bus &amp; pengemudi)</label>
         <table class="opt-table"><tbody>${fleets.map(f => `<tr><td><label class="check" style="margin:0"><input type="checkbox" data-fo="${esc(f.id)}" ${on(f.id) ? 'checked' : ''}> ${esc(f.name)} <span class="muted small">(${f.seats} kursi)</span></label></td><td style="width:150px"><input type="number" min="0" step="10000" data-fp="${esc(f.id)}" value="${priceOf(f.id)}" placeholder="Rp / bus" aria-label="Harga ${esc(f.name)}"></td></tr>`).join('')}</tbody></table>
@@ -388,6 +398,9 @@
         <h3 style="margin-top:22px">Ketentuan bayar</h3>
         <div class="row"><div><label for="s_dp">Uang muka (DP) %</label><input id="s_dp" type="number" min="10" max="100" value="${s.dpPercent || 50}"></div></div>
         <label for="s_pn">Catatan pembayaran</label><textarea id="s_pn" maxlength="500">${esc(s.paymentNote || '')}</textarea>
+        <h3 style="margin-top:22px">Mode demo</h3>
+        <label class="check"><input type="checkbox" id="s_demo" ${s.demoPayment ? 'checked' : ''}> Aktifkan tombol “Simulasi pembayaran” di halaman Lacak</label>
+        <div class="hint">Untuk demonstrasi: pelanggan bisa menandai pesanan sebagai sudah dibayar tanpa transfer. Pembayaran simulasi ditandai DEMO dan tidak dihitung ke omzet terverifikasi. <b>Matikan sebelum website dipakai pelanggan sungguhan.</b></div>
         <h3 style="margin-top:22px">Kontak</h3>
         <div class="row"><div><label for="s_wa">WhatsApp (format 628…)</label><input id="s_wa" type="tel" value="${esc(s.waNumber || '')}"></div><div><label for="s_ph">Tampilan nomor</label><input id="s_ph" type="text" value="${esc(s.phoneDisplay || '')}"></div></div>
         <div class="row"><div><label for="s_em">Email</label><input id="s_em" type="email" value="${esc(s.email || '')}"></div><div><label for="s_ad">Alamat</label><input id="s_ad" type="text" value="${esc(s.address || '')}"></div></div>
@@ -401,7 +414,7 @@
       const rows = $$('.bank').map(r => Object.fromEntries($$('[data-b]', r).map(i => [i.dataset.b, i.value])));
       const image = $('#qimgVal').value;
       if ($('#s_qen').checked && !image) return toast('Unggah gambar QRIS terlebih dahulu.');
-      await api('/api/admin/settings', json('PUT', { banks: rows, qris: { enabled: $('#s_qen').checked, image }, dpPercent: Number($('#s_dp').value), paymentNote: $('#s_pn').value, waNumber: $('#s_wa').value, phoneDisplay: $('#s_ph').value, email: $('#s_em').value, address: $('#s_ad').value }));
+      await api('/api/admin/settings', json('PUT', { banks: rows, qris: { enabled: $('#s_qen').checked, image }, dpPercent: Number($('#s_dp').value), demoPayment: $('#s_demo').checked, paymentNote: $('#s_pn').value, waNumber: $('#s_wa').value, phoneDisplay: $('#s_ph').value, email: $('#s_em').value, address: $('#s_ad').value }));
       toast('Pengaturan tersimpan.'); vSettings();
     }));
   }

@@ -156,18 +156,18 @@
     if (!f) return fail('Pilih armada terlebih dahulu.');
     if (!date()) return fail('Pilih tanggal berangkat.');
     if (g > f.seats * count) return fail(`Peserta (${g}) melebihi kapasitas ${count} × ${f.name}. Tambah jumlah armada.`);
-    if (!$('#name').value.trim() || !$('#phone').value.trim() || !$('#destination').value.trim()) return fail('Lengkapi nama, nomor WhatsApp, dan tujuan/titik penjemputan.');
+    if (!$('#name').value.trim() || !$('#phone').value.trim() || !$('#destination').value.trim()) return fail('Lengkapi nama, nomor WhatsApp, dan titik penjemputan.');
     const payload = { packageId: p ? p.id : '', fleetId: f.id, fleetCount: count, date: date(), days: d, guests: g, destination: $('#destination').value.trim(), customerName: $('#name').value.trim(), customerPhone: $('#phone').value.trim(), customerEmail: $('#email').value.trim(), notes: $('#notes').value.trim(), website: $('#website').value };
     btn.disabled = true; btn.textContent = 'Mengirim permintaan…';
     try {
       const res = await LP.api('/api/bookings', { method: 'POST', body: JSON.stringify(payload) });
       const b = res.booking, digits = payload.customerPhone.replace(/\D/g, '');
       try { const c = JSON.stringify({ code: b.id, phone: digits.slice(-4) }); localStorage.setItem('lp_track', c); sessionStorage.setItem('lp_prefill', c); } catch { /* abaikan */ }
-      const msg = `Halo Lautan Pasir, saya baru membuat pemesanan.\nKode: ${b.id}\nNama: ${payload.customerName}\nPaket/armada: ${b.package} · ${count} × ${b.fleet}\nTanggal: ${rangeText(b.date, b.days)}\nPeserta: ${g}\nTujuan/penjemputan: ${payload.destination}`;
+      const msg = `Halo Lautan Pasir, saya baru membuat pemesanan.\nKode: ${b.id}\nNama: ${payload.customerName}\nPaket/armada: ${b.package} · ${count} × ${b.fleet}\nTanggal: ${rangeText(b.date, b.days)}\nPeserta: ${g}\nTitik penjemputan: ${payload.destination}`;
       form.hidden = true;
       const box = $('#successBox'); box.hidden = false;
       box.innerHTML = `<div class="success-box"><div class="tick">✓</div><h2>Permintaan terkirim!</h2><p class="lead">Armada ${esc(b.fleet)} ditahan untuk ${esc(rangeText(b.date, b.days))}. Simpan kode pemesanan Anda untuk membayar dan melacak perjalanan.</p><div class="code-pill">${esc(b.id)}</div><p class="hint">Untuk membukanya Anda memerlukan kode ini dan 4 digit terakhir nomor WhatsApp (${esc(digits.slice(-4))}).</p>
-      <div class="alert ${total > 0 ? 'info' : 'warn'}" style="text-align:left">${total > 0 ? `Estimasi total <b>${rupiah(b.price)}</b>. Anda bisa langsung membayar DP atau lunas di halaman Lacak &amp; Bayar.` : 'Tim kami sedang menyiapkan penawaran harga dan akan menghubungi Anda lewat WhatsApp. Opsi pembayaran muncul di halaman Lacak setelah harga ditetapkan.'}</div>
+      ${b.deadlines ? `<div class="alert warn" style="text-align:left"><b>Batas pembayaran</b><br>DP paling lambat <b>${esc(LP.fmtDate(b.deadlines.dpBy))}</b> (3 hari sebelum berangkat); jika tidak, pemesanan dibatalkan.<br>Pelunasan paling lambat <b>${esc(LP.fmtDate(b.deadlines.fullBy))} pukul 23.59 WIB</b> (1 × 24 jam sebelum berangkat); jika tidak, pemesanan dibatalkan dan DP hangus.</div>` : ''}<div class="alert ${total > 0 ? 'info' : 'warn'}" style="text-align:left">${total > 0 ? `Estimasi total <b>${rupiah(b.price)}</b>. Anda bisa langsung membayar DP atau lunas di halaman Lacak &amp; Bayar.` : 'Tim kami sedang menyiapkan penawaran harga dan akan menghubungi Anda lewat WhatsApp. Opsi pembayaran muncul di halaman Lacak setelah harga ditetapkan.'}</div>
       <div class="success-actions"><a class="btn" href="/lacak">${total > 0 ? 'Lacak &amp; Bayar →' : 'Lacak Pesanan →'}</a><a class="btn line" target="_blank" rel="noopener noreferrer" href="${esc(LP.waLink(LP.settings, msg))}">Kirim ke WhatsApp</a></div></div>`;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {

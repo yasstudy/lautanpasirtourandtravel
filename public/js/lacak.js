@@ -54,6 +54,10 @@
     if (b.status === 'Dibatalkan') return '';
     const pending = b.payments.some(p => p.status === 'Menunggu verifikasi');
     let body = '';
+    const dl = b.deadlines;
+    const rules = dl ? (dl.fullOverdue || dl.dpOverdue
+      ? `<div class="alert err"><b>Batas pembayaran sudah terlewat.</b> Pemesanan dapat dibatalkan oleh tim kami. Segera hubungi kami lewat WhatsApp bila Anda masih ingin melanjutkan.</div>`
+      : b.balance > 0 && b.price > 0 ? `<div class="alert warn"><b>Batas pembayaran</b><br>${b.paid === 0 ? `DP paling lambat <b>${esc(LP.fmtDate(dl.dpBy))}</b> (3 hari sebelum berangkat); jika tidak, pemesanan dibatalkan.<br>` : ''}Pelunasan paling lambat <b>${esc(LP.fmtDate(dl.fullBy))} pukul 23.59 WIB</b> (1 × 24 jam sebelum berangkat); jika tidak, pemesanan dibatalkan dan DP yang sudah dibayarkan hangus.</div>` : '') : '';
     if (!(b.price > 0)) {
       body = '<div class="alert warn">Harga untuk pemesanan ini sedang disiapkan oleh tim kami. Anda akan dihubungi lewat WhatsApp, dan opsi pembayaran muncul di sini setelah harga ditetapkan.</div>';
     } else if (b.balance <= 0) {
@@ -80,7 +84,11 @@
           + `<form id="payForm" class="mt"><h3>Unggah bukti pembayaran</h3><div class="field"><label for="sender">Nama pengirim / pemilik rekening</label><input id="sender" class="inp" required maxlength="100" value="${esc(b.customerName)}"></div><div class="field mt"><label for="senderBank">${ui.method === 'transfer' ? 'Bank pengirim' : 'Aplikasi pembayaran'} (opsional)</label><input id="senderBank" class="inp" maxlength="60" placeholder="${ui.method === 'transfer' ? 'Contoh: BCA' : 'Contoh: GoPay, DANA, m-banking'}"></div><div class="field mt"><label for="proof">Foto / screenshot bukti</label><input id="proof" class="inp" type="file" accept="image/png,image/jpeg,image/webp" required><span class="hint">JPG, PNG, atau WebP. Ukuran diperkecil otomatis.</span><img id="proofPrev" class="proof-preview" alt="Pratinjau bukti pembayaran" hidden></div><div id="payAlert" role="alert"></div><button class="btn wide mt" id="payBtn" type="submit">Kirim Bukti Pembayaran →</button></form>`;
       }
     }
-    const history = b.payments.length ? `<h3>Riwayat pembayaran</h3><ul class="pay-list">${b.payments.slice().reverse().map(p => `<li><span><b>${rupiah(p.amount)}</b> · ${esc(p.method === 'qris' ? 'QRIS' : p.method === 'transfer' ? 'Transfer' : p.method)} · ${esc(fmtDateTime(p.at))}${p.note ? `<br><small class="muted">${esc(p.note)}</small>` : ''}</span><span class="badge ${p.status === 'Terverifikasi' ? 'p-Lunas' : p.status === 'Ditolak' ? 'p-Dikembalikan' : 'p-Menunggu'}">${esc(p.status)}</span></li>`).join('')}</ul>` : '';
+    if (rules && b.balance > 0 && b.price > 0) body = rules + body;
+    if (settings.demoPayment && b.price > 0 && b.balance > 0 && !pending) {
+      body += `<div class="alert info" style="margin-top:14px"><b>Mode demo aktif</b><br>Simulasikan pembayaran tanpa transfer sungguhan (hanya untuk demonstrasi).<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${b.paid === 0 ? `<button type="button" class="btn line sm" data-demo="dp">Simulasi bayar DP ${rupiah(dpAmount(b))}</button>` : ''}<button type="button" class="btn sm" data-demo="lunas">Simulasi bayar ${b.paid === 0 ? 'lunas' : 'pelunasan'} ${rupiah(b.balance)}</button></div></div>`;
+    }
+    const history = b.payments.length ? `<h3>Riwayat pembayaran</h3><ul class="pay-list">${b.payments.slice().reverse().map(p => `<li><span><b>${rupiah(p.amount)}</b> · ${esc(p.demo ? 'Simulasi (demo)' : p.method === 'qris' ? 'QRIS' : p.method === 'transfer' ? 'Transfer' : p.method)} · ${esc(fmtDateTime(p.at))}${p.note ? `<br><small class="muted">${esc(p.note)}</small>` : ''}</span><span class="badge ${p.status === 'Terverifikasi' ? 'p-Lunas' : p.status === 'Ditolak' ? 'p-Dikembalikan' : 'p-Menunggu'}">${esc(p.status)}</span></li>`).join('')}</ul>` : '';
     return `<div class="panel"><h2>Pembayaran</h2>${body}${history}</div>`;
   }
 
@@ -90,7 +98,7 @@
     const wa = LP.waLink(settings, `Halo Lautan Pasir, saya ingin menanyakan pemesanan ${b.id}.`);
     $('#result').innerHTML = `<div class="panel"><div class="track-head"><div><div class="kicker">Kode pemesanan</div><div class="code">${esc(b.id)}</div><div class="badges mt">${LP.badgeStatus(b.status)} ${LP.badgePayment(b.paymentStatus)}</div></div><div class="head-actions"><button class="btn line sm" type="button" id="reloadBtn">Muat ulang</button><a class="btn line sm" target="_blank" rel="noopener noreferrer" href="${esc(wa)}">Tanya admin</a><button class="btn line sm" type="button" id="otherBtn">Cari pesanan lain</button></div></div>
       ${stepper(b)}
-      <div class="kv"><div><small>Layanan</small><strong>${esc(b.package)}</strong></div><div><small>Armada</small><strong>${b.fleetCount > 1 ? `${esc(b.fleetCount)} × ` : ''}${esc(b.fleet)}</strong></div><div><small>Tanggal perjalanan</small><strong>${esc(rangeText(b.date, b.days))}</strong></div><div><small>Lama / peserta</small><strong>${esc(b.days)} hari · ${esc(b.guests)} orang</strong></div><div><small>Tujuan / penjemputan</small><strong>${esc(b.destination || '-')}</strong></div><div><small>Total</small><strong>${b.price > 0 ? rupiah(b.price) : 'Menunggu penawaran'}</strong></div>${b.price > 0 ? `<div><small>Sudah dibayar</small><strong>${rupiah(b.paid)}</strong></div><div><small>Sisa tagihan</small><strong>${rupiah(b.balance)}</strong></div>` : ''}</div></div>
+      <div class="kv"><div><small>Layanan</small><strong>${esc(b.package)}</strong></div><div><small>Armada</small><strong>${b.fleetCount > 1 ? `${esc(b.fleetCount)} × ` : ''}${esc(b.fleet)}</strong></div><div><small>Tanggal perjalanan</small><strong>${esc(rangeText(b.date, b.days))}</strong></div><div><small>Lama / peserta</small><strong>${esc(b.days)} hari · ${esc(b.guests)} orang</strong></div><div><small>Titik penjemputan</small><strong>${esc(b.destination || '-')}</strong></div><div><small>Total</small><strong>${b.price > 0 ? rupiah(b.price) : 'Menunggu penawaran'}</strong></div>${b.price > 0 ? `<div><small>Sudah dibayar</small><strong>${rupiah(b.paid)}</strong></div><div><small>Sisa tagihan</small><strong>${rupiah(b.balance)}</strong></div>` : ''}</div></div>
       <div class="two-col">${paymentPanel(b) || '<div></div>'}<div class="panel"><h2>Perkembangan</h2><ul class="timeline">${b.timeline.slice().reverse().map(t => `<li><strong>${esc(t.label)}</strong>${t.note ? `<p>${esc(t.note)}</p>` : ''}<time datetime="${esc(t.at)}">${esc(fmtDateTime(t.at))}</time></li>`).join('')}</ul></div></div>`;
     $('#reloadBtn').addEventListener('click', async () => { try { await fetchBooking(); render(); LP.toast('Data diperbarui.'); } catch (err) { LP.toast(err.message); } });
     $('#otherBtn').addEventListener('click', () => { forget(); booking = null; creds = null; $('#result').innerHTML = ''; $('#lookupPanel').hidden = false; $('#code').focus(); });
@@ -100,6 +108,11 @@
   function wirePayment() {
     for (const r of LP.$$('input[name=option]')) r.addEventListener('change', () => { ui.option = r.value; render(); });
     for (const m of LP.$$('[data-method]')) m.addEventListener('click', () => { ui.method = m.dataset.method; render(); });
+    for (const d of LP.$$('[data-demo]')) d.addEventListener('click', async () => {
+      d.disabled = true;
+      try { const r = await LP.api('/api/track/payments/demo', { method: 'POST', body: JSON.stringify({ code: creds.code, phone: creds.phone, option: d.dataset.demo }) }); booking = r.booking; render(); LP.toast('Pembayaran simulasi tercatat (DEMO).'); }
+      catch (err) { LP.toast(err.message); d.disabled = false; }
+    });
     const file = $('#proof'); if (!file) return;
     file.addEventListener('change', async () => {
       const prev = $('#proofPrev'); ui.proofData = ''; prev.hidden = true;

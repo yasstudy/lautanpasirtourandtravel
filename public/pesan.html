@@ -23,7 +23,7 @@
 <div class="field" id="daysField"><label for="days">Lama sewa (hari)</label><input id="days" type="number" min="1" max="30" value="1" required inputmode="numeric"></div>
 <div class="field" id="daysFixed" hidden><label>Lama perjalanan</label><div class="inp" id="daysFixedText" style="background:#f4f9fd"></div></div>
 <div class="field"><label for="guests">Jumlah peserta</label><input id="guests" type="number" min="1" max="500" value="20" required inputmode="numeric"></div>
-<div class="field"><label for="destination">Tujuan / titik penjemputan</label><input id="destination" required maxlength="200" placeholder="Contoh: Semarang – Yogyakarta"></div>
+<div class="field"><label for="destination">Titik penjemputan</label><input id="destination" required maxlength="200" placeholder="Contoh: Jl. Pandanaran No. 10, Semarang"><span class="hint">Alamat lengkap tempat bus menjemput rombongan Anda. Tujuan wisata mengikuti paket yang dipilih; untuk rute khusus, tulis di catatan.</span></div>
 <div class="form-section">3 · Pilih armada</div>
 <div class="fleet-pick" id="fleetPick" role="radiogroup" aria-label="Pilih armada"></div>
 <div class="field"><label for="fleetCount">Jumlah armada</label><input id="fleetCount" type="number" min="1" max="20" value="1" required inputmode="numeric"><span class="hint" id="countHint"></span></div>
@@ -34,6 +34,7 @@
 <div class="field full"><label for="email">Email (opsional)</label><input id="email" type="email" autocomplete="email" maxlength="180" placeholder="nama@email.com"></div>
 <div class="field full"><label for="notes">Catatan tambahan (opsional)</label><textarea id="notes" maxlength="500" placeholder="Rute, kebutuhan khusus, dll."></textarea></div>
 <div class="hp" aria-hidden="true"><label for="website">Jangan diisi</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
+<div class="field full"><div class="alert warn" id="payRules"><b>Ketentuan batas pembayaran</b><ul style="margin:6px 0 0 18px;padding:0"><li><b>DP</b> harus dibayar paling lambat <b>3 hari sebelum keberangkatan</b>. Jika tidak, pemesanan dibatalkan.</li><li><b>Pelunasan</b> harus dibayar paling lambat <b>1 × 24 jam sebelum keberangkatan</b>. Jika tidak, pemesanan dibatalkan dan <b>DP yang sudah dibayarkan hangus</b>.</li></ul></div></div>
 <div class="field full"><div id="formAlert" role="alert"></div><button class="btn wide" id="submitBtn" type="submit">Kirim Permintaan Pemesanan →</button><p class="form-note">Tanggal armada ditahan untuk Anda setelah permintaan terkirim, sampai admin mengonfirmasi atau membatalkannya. Dengan mengirim formulir, Anda menyetujui pemrosesan data sesuai <button type="button" class="privacy-inline" data-privacy>Kebijakan Privasi &amp; Perlindungan Data Pribadi</button>.</p></div>
 </div></form>
 <div id="successBox" hidden></div>

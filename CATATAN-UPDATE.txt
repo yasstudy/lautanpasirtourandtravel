@@ -1,0 +1,13 @@
+UPDATE: Mode Demo pembayaran, Titik Penjemputan, Notice batas bayar
+Cara pasang: salin 5 file ini ke proyek (timpa file lama, struktur folder sama), lalu jalankan ulang server.
+Data lama aman (tidak ada migrasi). Tidak ada variabel baru.
+
+1. Mode demo: Admin > Pembayaran & Kontak > "Mode demo". Bila aktif, halaman Lacak menampilkan tombol
+   Simulasi bayar DP / lunas. Pembayaran ditandai SIMULASI (DEMO), tidak dihitung ke omzet terverifikasi.
+   Matikan sebelum dipakai pelanggan sungguhan. Saat nonaktif, server menolak (403).
+2. "Tujuan / titik penjemputan" -> "Titik penjemputan" (form, halaman Lacak, panel admin).
+3. DP: paling lambat 3 hari sebelum berangkat (sampai 23.59 WIB), jika tidak pemesanan dibatalkan.
+4. Pelunasan: paling lambat 1x24 jam sebelum berangkat (acuan 00.00 WIB tanggal berangkat = sampai 23.59 WIB
+   dua hari sebelumnya), jika tidak pemesanan dibatalkan dan DP hangus.
+   Notice tampil di formulir pesan, layar sukses (dengan tanggal), dan halaman Lacak. Admin melihat label
+   "Lewat batas bayar" di daftar/rincian. Pembatalan tetap manual oleh admin (ubah status ke Dibatalkan).

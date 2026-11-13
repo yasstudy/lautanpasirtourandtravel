@@ -148,7 +148,7 @@ const DEFAULT_PACKAGES = [
 ];
 const DEFAULT_SETTINGS = {
   waNumber: '6282234567890', phoneDisplay: '0822-3456-7890', email: 'lautanpasirtravel@gmail.com',
-  address: 'Jl. Raya Madiun No. 123, Malang', dpPercent: 50, paymentNote: '',
+  address: 'Jl. Raya Madiun No. 123, Malang', dpPercent: 50, paymentNote: '', demoPayment: false,
   banks: [], qris: { enabled: false, image: '' }
 };
 
@@ -228,15 +228,29 @@ function findBooking(rows, id) {
   return row;
 }
 /** Tampilan untuk pelanggan: tanpa catatan internal, nama berkas bukti, atau email. */
+/* Kebijakan batas bayar (ditampilkan ke pelanggan; pembatalan dilakukan admin):
+   - DP paling lambat 3 hari sebelum tanggal berangkat (sampai 23.59 WIB).
+   - Pelunasan paling lambat 24 jam sebelum keberangkatan; acuan = pukul 00.00 WIB tanggal berangkat, jadi sampai 23.59 WIB dua hari sebelumnya. */
+const DP_DEADLINE_DAYS = 3;
+function deadlines(b, paid = paidTotal(b)) {
+  if (!validDate(b.date)) return null;
+  const dpBy = addDays(b.date, -DP_DEADLINE_DAYS), fullBy = addDays(b.date, -2), today = todayWib();
+  const active = !['Dibatalkan', 'Selesai'].includes(b.status);
+  return {
+    dpBy, fullBy,
+    dpOverdue: active && paid === 0 && today > dpBy,
+    fullOverdue: active && (b.price || 0) > 0 && paid < b.price && today > fullBy
+  };
+}
 function publicBooking(b) {
   const paid = paidTotal(b);
   const days = Math.max(1, Number(b.days) || 1);
   return {
     id: b.id, customerName: b.customerName, package: b.package || '', fleet: b.fleet || 'Belum ditentukan', fleetCount: b.fleetCount || 1,
     date: b.date, days, endDate: validDate(b.date) ? addDays(b.date, days - 1) : b.date, guests: b.guests, destination: b.destination || '', price: b.price || 0,
-    status: b.status, paymentStatus: b.paymentStatus, paid, balance: Math.max(0, (b.price || 0) - paid), createdAt: b.createdAt,
+    status: b.status, paymentStatus: b.paymentStatus, paid, deadlines: deadlines(b, paid), balance: Math.max(0, (b.price || 0) - paid), createdAt: b.createdAt,
     timeline: (b.timeline || []).map(t => ({ at: t.at, label: t.label, note: t.note || '' })),
-    payments: (b.payments || []).map(p => ({ id: p.id, at: p.at, method: p.method, amount: p.amount, status: p.status, note: p.status === 'Ditolak' ? (p.note || '') : '' }))
+    payments: (b.payments || []).map(p => ({ id: p.id, at: p.at, method: p.method, demo: Boolean(p.demo), amount: p.amount, status: p.status, note: p.status === 'Ditolak' ? (p.note || '') : '' }))
   };
 }
 /** Harga SELALU dihitung server. Paket: harga per armada (sudah termasuk armada). Tanpa paket: tarif armada per hari. */
@@ -413,7 +427,7 @@ app.post('/api/bookings', limiter('book', 10, 3600e3, 'Terlalu banyak pemesanan 
   if (!validDate(date) || date < todayWib()) throw new HttpError(400, 'Tanggal berangkat tidak valid atau sudah lewat.');
   if (date > addDays(todayWib(), MAX_AHEAD_DAYS)) throw new HttpError(400, 'Tanggal berangkat terlalu jauh. Hubungi kami untuk pemesanan jangka panjang.');
   if (!guests || !fleetCount) throw new HttpError(400, 'Jumlah peserta dan armada harus berupa angka yang wajar.');
-  if (!destination) throw new HttpError(400, 'Isi tujuan atau titik penjemputan.');
+  if (!destination) throw new HttpError(400, 'Isi titik penjemputan.');
 
   const [packages, fleets] = await Promise.all([getPackages(), getFleet()]);
   const fleet = fleets.find(f => f.id === body.fleetId && f.active !== false);
@@ -491,6 +505,28 @@ app.post('/api/track/payments', limiter('pay', 20, 3600e3), asyncRoute(async (re
     });
     b.paymentStatus = computePaymentStatus(b);
     addTimeline(b, 'Bukti pembayaran diunggah', `Rp ${rupiah(amount)} via ${method === 'qris' ? 'QRIS' : 'transfer bank'} — menunggu verifikasi admin.`);
+    return b;
+  });
+  res.status(201).json({ success: true, booking: publicBooking(result) });
+}));
+
+/* ---- simulasi pembayaran (hanya bila admin mengaktifkan Mode Demo) ---- */
+app.post('/api/track/payments/demo', limiter('pay', 20, 3600e3), asyncRoute(async (req, res) => {
+  const settings = await readJson('settings.json', DEFAULT_SETTINGS);
+  if (!settings.demoPayment) throw new HttpError(403, 'Simulasi pembayaran sedang tidak aktif.');
+  const result = await update('bookings.json', [], rows => {
+    const b = matchBooking(rows, req.body?.code, req.body?.phone);
+    if (['Dibatalkan', 'Selesai'].includes(b.status)) throw new HttpError(400, `Pemesanan berstatus ${b.status}, pembayaran tidak dapat ditambahkan.`);
+    if (!(b.price > 0)) throw new HttpError(400, 'Harga belum ditetapkan.');
+    if ((b.payments || []).some(p => p.status === 'Menunggu verifikasi')) throw new HttpError(409, 'Masih ada pembayaran yang menunggu verifikasi.');
+    const outstanding = b.price - paidTotal(b);
+    if (outstanding <= 0) throw new HttpError(400, 'Pemesanan ini sudah lunas.');
+    const dp = Math.min(outstanding, Math.ceil((b.price * (Number(settings.dpPercent) || 50)) / 100 / 1000) * 1000);
+    const amount = req.body?.option === 'dp' && paidTotal(b) === 0 ? dp : outstanding;
+    b.payments = b.payments || [];
+    b.payments.push({ id: `PAY-${crypto.randomBytes(3).toString('hex').toUpperCase()}`, at: nowIso(), method: 'demo', demo: true, bank: '', senderName: 'Simulasi', amount, status: 'Terverifikasi', proof: '', note: 'Simulasi pembayaran (demo)' });
+    b.paymentStatus = computePaymentStatus(b);
+    addTimeline(b, 'Pembayaran simulasi (DEMO)', `Rp ${rupiah(amount)} — bukan pembayaran sungguhan.`);
     return b;
   });
   res.status(201).json({ success: true, booking: publicBooking(result) });
@@ -635,7 +671,7 @@ app.get('/api/stats', adminOnly, asyncRoute(async (_req, res) => {
   res.json({
     totalBookings: rows.length, statusCounts, fleetUsage, fleetUsed: Object.keys(fleetUsage).length,
     revenueEstimate: active.reduce((s, r) => s + (Number(r.price) || 0), 0),
-    revenueVerified: rows.reduce((s, r) => s + paidTotal(r), 0),
+    revenueVerified: rows.reduce((s, r) => s + (r.payments || []).filter(p => p.status === 'Terverifikasi' && !p.demo).reduce((t, p) => t + (Number(p.amount) || 0), 0), 0),
     pendingPayments: rows.reduce((s, r) => s + (r.payments || []).filter(p => p.status === 'Menunggu verifikasi').length, 0),
     awaitingQuote: active.filter(r => !(r.price > 0)).length
   });
@@ -791,7 +827,7 @@ app.put('/api/admin/settings', adminOnly, asyncRoute(async (req, res) => {
   const settings = await update('settings.json', DEFAULT_SETTINGS, current => {
     Object.assign(current, {
       waNumber: wa || current.waNumber, phoneDisplay: cleanText(b.phoneDisplay, 40), email, address: cleanText(b.address, 200),
-      dpPercent: toInt(b.dpPercent, 10, 100, 50), paymentNote: cleanText(b.paymentNote, 500), banks,
+      dpPercent: toInt(b.dpPercent, 10, 100, 50), paymentNote: cleanText(b.paymentNote, 500), banks, demoPayment: Boolean(b.demoPayment),
       qris: { enabled: Boolean(b.qris?.enabled) && Boolean(qrisImage), image: qrisImage }
     });
     return current;
