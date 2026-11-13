@@ -8,6 +8,7 @@ if exist "%~dp0runtime\node\node.exe" set "NODE=%~dp0runtime\node\node.exe"
 
 for /f "usebackq eol=# tokens=1,* delims==" %%A in (".env") do set "%%A=%%B"
 if not defined PORT set "PORT=3000"
+if not defined HOST set "HOST=127.0.0.1"
 
 echo ==================================================
 echo   LAUTAN PASIR - SERVER LOKAL

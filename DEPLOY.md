@@ -53,3 +53,26 @@ lautanpasirtourandtravel.com, www.lautanpasirtourandtravel.com {
 - Uji satu pemesanan sampai pembayaran, dari HP.
 - Backup rutin folder data (mis. cron `tar` ke penyimpanan lain).
 - Jangan pakai skrip lama `seikouverse.com/lautan-pasir.ps1` untuk server.
+
+---
+
+# Alternatif cepat: SnapDeploy (tanpa server sendiri)
+
+Aplikasi ini sudah siap untuk SnapDeploy: membaca `PORT` dari platform, mendengarkan di
+`0.0.0.0`, punya `/api/health`, dan `npm start` menjalankan `server.js`.
+**Satu-satunya variabel yang perlu diisi: `ADMIN_USER` dan `ADMIN_PASSWORD`** (min. 10 karakter).
+`PORT`/`HOST` diatur otomatis oleh SnapDeploy; jangan diisi.
+
+1. Buat repo GitHub dan unggah isi folder ini (`.gitignore` sudah menyingkirkan `node_modules`, `data`, `.env`).
+2. snapdeploy.dev → Deploy from GitHub → pilih repo & branch.
+3. Di layar "Environment Variables", isi hanya `ADMIN_USER` dan `ADMIN_PASSWORD`. Deploy.
+4. Buka URL yang diberikan, login ke `/admin/` dengan akun tadi, lalu isi unit armada, harga, rekening/QRIS.
+
+Perlu diperhatikan:
+- **Paket gratis tertidur** setelah 15 menit tanpa kunjungan (bangun ±60 detik). **Domain sendiri
+  mensyaratkan paket Always-On** (sekitar $12/bulan per container). Untuk bisnis, pakai Always-On.
+- **Penyimpanan data:** data (pemesanan, bukti bayar, foto) disimpan di disk container. Dokumentasi SnapDeploy
+  yang saya baca tidak menyebut penyimpanan permanen, jadi **pastikan dulu** apakah disk bertahan setelah
+  redeploy/restart (tanya support atau uji: buat pemesanan, deploy ulang, cek masih ada). Bila tidak
+  bertahan, pemesanan bisa hilang saat deploy ulang, dan di situasi itu lebih aman memakai VPS (bagian atas).
+- `ADMIN_PASSWORD` hanya dipakai saat akun admin pertama dibuat. Ganti password lewat tab Akun.
