@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ajukan Sewa & Pemesanan — Lautan Pasir Tour & Travel</title>
+<meta name="description" content="Pesan paket wisata atau sewa bus Lautan Pasir. Pilih armada sesuai kapasitas, cek ketersediaan tanggal, lihat estimasi harga, dan bayar lewat transfer bank atau QRIS.">
+<meta name="theme-color" content="#064782">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+<div id="site-header"></div>
+<main>
+<section class="page-hero"><div class="wrap"><div class="crumbs"><a href="/">Beranda</a> / Ajukan Sewa</div><div class="eyebrow">Formulir Pemesanan</div><h1>Ajukan Sewa &amp; Perjalanan</h1><p>Pilih paket atau sewa armada saja, cek ketersediaan tanggalnya, lalu kirim permintaan. Anda mendapat kode pemesanan untuk membayar dan melacak perjalanan.</p></div></section>
+<section class="section"><div class="wrap book-layout">
+<div class="panel">
+<form id="bookingForm" novalidate><div class="form-grid">
+<div class="form-section">1 · Pilih layanan</div>
+<div class="field full"><label for="package">Paket wisata</label><select id="package"></select><span class="hint" id="pkgHint"></span></div>
+<div class="form-section">2 · Tanggal &amp; peserta</div>
+<div class="field"><label for="date">Tanggal berangkat</label><input id="date" type="date" required></div>
+<div class="field" id="daysField"><label for="days">Lama sewa (hari)</label><input id="days" type="number" min="1" max="30" value="1" required inputmode="numeric"></div>
+<div class="field" id="daysFixed" hidden><label>Lama perjalanan</label><div class="inp" id="daysFixedText" style="background:#f4f9fd"></div></div>
+<div class="field"><label for="guests">Jumlah peserta</label><input id="guests" type="number" min="1" max="500" value="20" required inputmode="numeric"></div>
+<div class="field"><label for="destination">Tujuan / titik penjemputan</label><input id="destination" required maxlength="200" placeholder="Contoh: Semarang – Yogyakarta"></div>
+<div class="form-section">3 · Pilih armada</div>
+<div class="fleet-pick" id="fleetPick" role="radiogroup" aria-label="Pilih armada"></div>
+<div class="field"><label for="fleetCount">Jumlah armada</label><input id="fleetCount" type="number" min="1" max="20" value="1" required inputmode="numeric"><span class="hint" id="countHint"></span></div>
+<div class="field"><label>Kalender</label><button type="button" class="btn line" id="openCal">Lihat kalender ketersediaan</button><span class="hint">Lihat tanggal mana yang masih kosong.</span></div>
+<div class="form-section">4 · Data pemesan</div>
+<div class="field"><label for="name">Nama pemesan</label><input id="name" required maxlength="120" autocomplete="name" placeholder="Nama lengkap"></div>
+<div class="field"><label for="phone">Nomor WhatsApp</label><input id="phone" required type="tel" autocomplete="tel" inputmode="tel" placeholder="08xxxxxxxxxx"></div>
+<div class="field full"><label for="email">Email (opsional)</label><input id="email" type="email" autocomplete="email" maxlength="180" placeholder="nama@email.com"></div>
+<div class="field full"><label for="notes">Catatan tambahan (opsional)</label><textarea id="notes" maxlength="500" placeholder="Rute, kebutuhan khusus, dll."></textarea></div>
+<div class="hp" aria-hidden="true"><label for="website">Jangan diisi</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
+<div class="field full"><div id="formAlert" role="alert"></div><button class="btn wide" id="submitBtn" type="submit">Kirim Permintaan Pemesanan →</button><p class="form-note">Tanggal armada ditahan untuk Anda setelah permintaan terkirim, sampai admin mengonfirmasi atau membatalkannya. Dengan mengirim formulir, Anda menyetujui pemrosesan data sesuai <button type="button" class="privacy-inline" data-privacy>Kebijakan Privasi &amp; Perlindungan Data Pribadi</button>.</p></div>
+</div></form>
+<div id="successBox" hidden></div>
+</div>
+<aside class="panel summary" aria-label="Ringkasan biaya"><h2>Ringkasan</h2><p class="lead">Estimasi biaya diperbarui otomatis.</p><dl id="sumList"></dl><div class="total"><span>Estimasi total</span><strong id="sumTotal">—</strong></div><div id="sumNote" aria-live="polite"></div></aside>
+</div></section>
+</main>
+<div id="site-footer"></div>
+<div class="modal cal-modal" id="calModal" role="dialog" aria-modal="true" aria-labelledby="calTitle"><div class="modal-box"><div class="modal-top"><div><div class="kicker">Kalender Ketersediaan</div><h2 id="calTitle"></h2></div><button class="close" type="button" aria-label="Tutup kalender" data-close-modal>×</button></div><p class="form-note" style="margin:0 0 12px">Ketuk tanggal yang tersedia untuk memilihnya sebagai tanggal berangkat.</p><div id="calHost"></div></div></div>
+<script src="/js/site.js"></script>
+<script src="/js/pesan.js"></script>
+</body>
+</html>

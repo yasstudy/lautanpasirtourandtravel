@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lacak Pesanan & Pembayaran — Lautan Pasir Tour & Travel</title>
+<meta name="description" content="Pantau status pemesanan, bayar DP atau pelunasan lewat transfer bank atau QRIS, dan lihat update perjalanan Anda.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#064782">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+<div id="site-header"></div>
+<main>
+<section class="page-hero"><div class="wrap"><div class="crumbs"><a href="/">Beranda</a> / Lacak Pesanan</div><div class="eyebrow">Lacak &amp; Bayar</div><h1>Pantau Perjalanan Anda</h1><p>Lihat status pemesanan, bayar DP atau pelunasan, dan baca update terbaru dari tim kami.</p></div></section>
+<section class="section"><div class="wrap narrow">
+<div class="panel" id="lookupPanel"><h2>Cari pesanan</h2><p class="lead">Masukkan kode pemesanan dan 4 digit terakhir nomor WhatsApp yang dipakai saat memesan.</p>
+<form class="lookup-form" id="lookupForm"><div><label for="code">Kode pemesanan</label><input id="code" class="inp" placeholder="LP-202611-1234" autocomplete="off" required></div><div><label for="phone">4 digit akhir WA</label><input id="phone" class="inp" inputmode="numeric" maxlength="4" pattern="\d{4}" placeholder="1234" autocomplete="off" required></div><button class="btn" id="lookupBtn" type="submit">Lacak →</button></form><div id="lookupAlert" role="alert"></div></div>
+<div id="result" aria-live="polite"></div>
+</div></section>
+</main>
+<div id="site-footer"></div>
+<script src="/js/site.js"></script>
+<script src="/js/lacak.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Armada Bus & Hiace — Lautan Pasir Tour & Travel</title>
+<meta name="description" content="Sewa bus pariwisata per hari: Medium Bus, Big Bus, dan Big Bus kapasitas besar. Pilih lama sewa, lihat kalender ketersediaan, dan hitung biaya langsung.">
+<meta name="theme-color" content="#064782">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+<div id="site-header"></div>
+<main>
+<section class="page-hero"><div class="wrap"><div class="crumbs"><a href="/">Beranda</a> / Armada</div><div class="eyebrow">Sewa Armada</div><h1>Pilihan Bus &amp; Hiace</h1><p>Pilih tanggal dan berapa hari Anda ingin menyewa. Harga dan ketersediaan setiap armada langsung diperbarui.</p></div></section>
+<section class="section fleet-section"><div class="wrap">
+<form class="rent-bar" id="rentBar" novalidate aria-label="Atur tanggal dan lama sewa">
+<div><label for="rDate">Tanggal berangkat</label><input id="rDate" class="inp" type="date"></div>
+<div><label for="rDays">Lama sewa (hari)</label><div class="num-step"><button type="button" data-step="-1" aria-label="Kurangi hari">−</button><input id="rDays" type="number" min="1" max="30" value="1" inputmode="numeric" aria-label="Jumlah hari"><button type="button" data-step="1" aria-label="Tambah hari">+</button></div></div>
+<div><label for="rGuests">Jumlah peserta (opsional)</label><input id="rGuests" class="inp" type="number" min="1" max="500" placeholder="Contoh: 45" inputmode="numeric"><span class="hint">Untuk menghitung berapa unit yang dibutuhkan.</span></div>
+</form>
+<div class="fleet-grid" id="grid" aria-live="polite"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+</div></section>
+<section class="cta"><div class="wrap"><div class="cta-box"><div><div class="kicker" style="color:#ffdc80">Lebih suka paket lengkap?</div><h2>Paket wisata sudah termasuk bus dan pengemudi.</h2><p>Pilih destinasi, lalu pilih armada sesuai jumlah peserta.</p></div><a class="btn gold" href="/paket">Lihat Paket &nbsp; →</a></div></div></section>
+</main>
+<div id="site-footer"></div>
+<div class="modal cal-modal" id="calModal" role="dialog" aria-modal="true" aria-labelledby="calTitle"><div class="modal-box"><div class="modal-top"><div><div class="kicker">Kalender Ketersediaan</div><h2 id="calTitle"></h2></div><button class="close" type="button" aria-label="Tutup kalender" data-close-modal>×</button></div><p class="form-note" style="margin:0 0 12px">Ketuk tanggal yang tersedia untuk memilihnya sebagai tanggal berangkat.</p><div id="calHost"></div></div></div>
+<script src="/js/site.js"></script>
+<script src="/js/armada.js"></script>
+</body>
+</html>

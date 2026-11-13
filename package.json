@@ -1,0 +1,10 @@
+{
+  "name": "lautan-pasir-booking",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Website, pemesanan, kalender armada, pembayaran, tracking, dan panel admin Lautan Pasir Tour & Travel",
+  "main": "server.js",
+  "engines": { "node": ">=18" },
+  "scripts": { "start": "node server.js", "dev": "node --watch server.js" },
+  "dependencies": { "express": "^4.21.2" }
+}

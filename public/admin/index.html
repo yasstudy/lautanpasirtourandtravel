@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#064782">
+<title>Admin | Lautan Pasir Tour &amp; Travel</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+<section id="loginView" class="login hidden">
+  <form id="loginForm" class="login-card" autocomplete="on">
+    <div class="brand">LAUTAN PASIR<small>TOUR &amp; TRAVEL — ADMIN</small></div>
+    <h1>Masuk admin</h1>
+    <p class="muted small" style="margin:0">Gunakan akun pengelola Lautan Pasir.</p>
+    <label for="lu">Username</label>
+    <input id="lu" name="username" type="text" autocomplete="username" required>
+    <label for="lp">Kata sandi</label>
+    <input id="lp" name="password" type="password" autocomplete="current-password" required>
+    <div id="loginErr" class="err" role="alert"></div>
+    <button class="btn" style="width:100%" type="submit">Masuk</button>
+  </form>
+</section>
+
+<section id="pwView" class="login hidden">
+  <form id="pwForm" class="login-card" autocomplete="off">
+    <h1>Ganti kata sandi</h1>
+    <p class="muted small" style="margin:6px 0 0" id="pwIntro">Demi keamanan, ganti kata sandi awal sebelum memakai panel admin.</p>
+    <label for="pc">Kata sandi saat ini</label>
+    <input id="pc" name="current" type="password" autocomplete="current-password" required>
+    <label for="pn">Kata sandi baru (min. 10 karakter)</label>
+    <input id="pn" name="next" type="password" autocomplete="new-password" minlength="10" required>
+    <label for="pn2">Ulangi kata sandi baru</label>
+    <input id="pn2" name="again" type="password" autocomplete="new-password" minlength="10" required>
+    <div id="pwErr" class="err" role="alert"></div>
+    <div class="actions"><button class="btn" type="submit">Simpan</button><button class="btn line hidden" type="button" id="pwCancel">Batal</button><button class="btn line" type="button" id="pwLogout">Keluar</button></div>
+  </form>
+</section>
+
+<div id="appView" class="hidden">
+  <header class="topbar">
+    <div class="top-brand">LAUTAN PASIR<small>ADMIN</small></div>
+    <nav class="tabs" role="tablist" id="tabs">
+      <button class="tab" role="tab" data-tab="pemesanan">Pemesanan<span id="pendDot" class="dot hidden"></span></button>
+      <button class="tab" role="tab" data-tab="kalender">Kalender</button>
+      <button class="tab" role="tab" data-tab="paket">Paket</button>
+      <button class="tab" role="tab" data-tab="armada">Armada</button>
+      <button class="tab" role="tab" data-tab="pengaturan">Pembayaran &amp; Kontak</button>
+      <button class="tab" role="tab" data-tab="akun">Akun</button>
+    </nav>
+    <a class="btn line sm" href="/" target="_blank" rel="noopener">Lihat situs</a>
+    <button class="btn line sm" id="logoutBtn" type="button">Keluar</button>
+  </header>
+  <main id="main"></main>
+</div>
+<div id="layer"></div>
+<script src="/admin/admin.js"></script>
+</body>
+</html>
